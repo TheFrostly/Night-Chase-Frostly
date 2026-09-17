@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KANLI AY ORMANI - Koca Ayak Kovalamacası (3D)</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Segoe UI',Arial,sans-serif;color:#c9cdd6}
+  #c3d{position:fixed;inset:0;display:block}
+  .overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 35%, rgba(46,6,10,.85), rgba(2,2,4,.96));text-align:center;padding:18px;transition:opacity .4s}
+  .overlay.hidden{display:none}
+  .oTitle{font-size:clamp(24px,5vw,52px);font-weight:800;letter-spacing:6px;color:#ff3b30;text-shadow:0 0 22px rgba(255,30,20,.7),0 0 60px rgba(200,10,10,.35)}
+  .oSub{font-size:20px;letter-spacing:10px;color:#6a7080;margin-top:2px}
+  .oText{max-width:640px;line-height:1.75;font-size:15px;color:#b9bec9;margin-top:22px;text-shadow:0 1px 2px #000}
+  .oText b{color:#ff7a58}
+  .keys{display:grid;grid-template-columns:auto auto;gap:4px 22px;margin-top:18px;text-align:left;font-size:14px;color:#9aa1b0}
+  .keys kbd{display:inline-block;min-width:30px;text-align:center;padding:3px 7px;border:1px solid #4a5060;border-bottom-width:3px;border-radius:5px;background:#14161c;color:#e8ebf2;font-family:inherit}
+  .btn{margin-top:26px;padding:14px 44px;font-size:18px;font-weight:700;letter-spacing:4px;color:#0a0a0c;background:linear-gradient(#ff6a4d,#c63817);border:none;border-radius:8px;cursor:pointer;box-shadow:0 0 26px rgba(255,80,40,.5);transition:transform .12s}
+  .btn:hover{transform:scale(1.05)}
+  .btn:active{transform:scale(.97)}
+  .fade-in{animation:fi 1.4s ease}
+  @keyframes fi{from{opacity:0}to{opacity:1}}
+  #hud{position:fixed;inset:0;z-index:10;pointer-events:none;display:none}
+  #hud.on{display:block}
+  #topBand{position:absolute;top:14px;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:0 18px}
+  #distBox{text-align:left;background:rgba(5,5,8,.55);border:1px solid rgba(255,60,40,.25);border-radius:8px;padding:8px 12px;min-width:170px}
+  #distTxt{font-size:17px;letter-spacing:2px;color:#ffd9c9}
+  #distVal{font-size:26px;font-weight:800;color:#ff7a58;text-shadow:0 0 12px rgba(255,90,50,.6)}
+  #compass{display:flex;flex-direction:column;align-items:center;background:rgba(5,5,8,.55);border:1px solid rgba(80,255,120,.28);border-radius:8px;padding:8px 14px}
+  #arrow{width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:24px solid #ffd24d;filter:drop-shadow(0 0 8px rgba(255,200,60,.8));transition:transform .06s linear}
+  #compTxt{font-size:12px;letter-spacing:2px;color:#aef0be;margin-top:4px}
+  #stamWrap{position:absolute;left:50%;transform:translateX(-50%);bottom:26px;width:320px;max-width:70vw}
+  #stamLabel{font-size:12px;letter-spacing:3px;color:#8a91a0;text-align:center;margin-bottom:6px}
+  #stamBg{height:14px;background:rgba(6,6,10,.7);border:1px solid #3c404e;border-radius:9px;overflow:hidden}
+  #stamFill{height:100%;width:100%;background:linear-gradient(90deg,#6ff57a,#efff8f);border-radius:9px;transition:width .08s linear}
+  #hudHint{position:absolute;left:50%;transform:translateX(-50%);bottom:54px;font-size:13px;color:#8f96a4;letter-spacing:1px;text-align:center;width:92%;opacity:.85}
+  #vign{position:fixed;inset:0;z-index:11;pointer-events:none;background:radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,.72) 100%);display:none}
+  #vign.on{display:block}
+  #bfOverlay{position:fixed;inset:0;z-index:12;pointer-events:none;background:radial-gradient(ellipse at center, transparent 30%, rgba(255,10,10,.5) 100%);opacity:0;transition:opacity .15s}
+  #caflash{position:fixed;inset:0;z-index:15;pointer-events:none;background:radial-gradient(ellipse at center, rgba(255,255,255,.9), rgba(255,40,30,.85));opacity:0}
+  #nv{position:fixed;inset:0;z-index:13;pointer-events:none;display:none;background:radial-gradient(ellipse at center, rgba(60,255,90,.10) 0%, rgba(30,120,50,.18) 55%, rgba(0,40,10,.45) 100%);mix-blend-mode:screen}
+  #nv.on{display:block}
+  #nvScans{position:fixed;inset:0;z-index:14;pointer-events:none;display:none;opacity:.28;background:repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 5px)}
+  #nvScans.on{display:block}
+  #chambox{position:fixed;inset:0;z-index:16;pointer-events:none;display:none;background:#000}
+  #chambox.on{display:block}
+  #crosshair{position:fixed;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;background:#fff;border-radius:50%;opacity:.65;z-index:17;box-shadow:0 0 6px #fff}
+  #err{position:fixed;left:8px;bottom:8px;z-index:99;max-width:70vw;background:#300;color:#f88;font-size:12px;padding:6px 10px;border-radius:6px;display:none;white-space:pre-wrap;font-family:monospace}
+  #flashTxt{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:18;font-size:clamp(30px,6vw,64px);font-weight:900;letter-spacing:8px;text-align:center;opacity:0;transition:opacity .25s;text-shadow:0 0 30px rgba(255,50,30,.85);pointer-events:none}
+  #flashTxt.on{opacity:1}
+</style>
+</head>
+<body>
+<canvas id="c3d"></canvas>
+<div id="err"></div>
+<div id="crosshair"></div>
+<div id="nvScans"></div>
+<div id="nv"></div>
+<div id="bfOverlay"></div>
+<div id="vign"></div>
+<div id="caflash"></div>
+<div id="flashTxt"></div>
+<div id="hud">
+  <div id="topBand">
+    <div id="distBox">
+      <div id="distTxt">ÇIKIŞA MESAFE</div>
+      <div id="distVal">-- m</div>
+    </div>
+    <div id="compass">
+      <div id="arrow"></div>
+      <div id="compTxt">ÇIKIŞ</div>
+    </div>
+  </div>
+  <div id="hudHint">W A S D: koş &nbsp; SHIFT: hızlı koş (stamina) &nbsp; SPACE: zıpla &nbsp; F: el feneri &nbsp; N: gece görüşü &nbsp; R: arkaya bak &nbsp; M: ses</div>
+  <div id="stamWrap">
+    <div id="stamLabel">STAMINA</div>
+    <div id="stamBg"><div id="stamFill"></div></div>
+  </div>
+</div>
+
+<div id="menu" class="overlay fade-in">
+  <div class="oTitle">KANLI AY ORMANI</div>
+  <div class="oSub">3D KORKU &middot; KAÇIŞ</div>
+  <div class="oText">
+    Gece yarısı. Kan kırmızısı bir ay sisin ardında süzülüyor. Ormanda tek başınasın.
+    Arkanda devasa bir <b>Koca Ayak</b> var; kükremesi ağaçları titretiyor.
+    <br>O sana ulaşmadan, <b>ormanın çıkışına</b> varmalısın. Koş. Zıpla. Saklanma. Çıkışa ulaş.
+  </div>
+  <div class="keys">
+    <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>Koş</span>
+    <span><kbd>SHIFT</kbd></span><span>Hızlı koş (stamina harcar)</span>
+    <span><kbd>SPACE</kbd></span><span>Zıpla (engelleri aş)</span>
+    <span><kbd>F</kbd></span><span>El feneri aç/kapa</span>
+    <span><kbd>N</kbd></span><span>Gece görüşü aç/kapa</span>
+    <span><kbd>R</kbd></span><span>Arkana bak</span>
+    <span><kbd>M</kbd></span><span>Sesi kapat/aç</span>
+  </div>
+  <button class="btn" id="btnStart">OYUNA BAŞLA</button>
+  <div style="margin-top:14px;font-size:12px;color:#6a7080;letter-spacing:2px">Kulaklık önerilir</div>
+</div>
+
+<div id="pauseMenu" class="overlay hidden">
+  <div class="oTitle" style="font-size:30px">DURAKLATILDI</div>
+  <div class="oText">Koca Ayak seni bekliyor... Sol uğulduyor.</div>
+  <button class="btn" id="btnResume">DEVAM ET</button>
+  <button class="btn" id="btnRestart" style="background:linear-gradient(#4a4e5c,#26292f);color:#e8ebf2">BAŞTAN BAŞLA</button>
+</div>
+
+<div id="winMenu" class="overlay hidden">
+  <div class="oTitle" style="color:#7dffa0;text-shadow:0 0 22px rgba(60,255,120,.7)">ORMANDAN KAÇTIN!</div>
+  <div class="oText">Koca Ayak'ı arkada bıraktın. Kanlı ayın altında ormanın çıkışına ulaştın. Nefesini tut... sessizlik.</div>
+  <button class="btn" id="btnAgain" style="background:linear-gradient(#5af08a,#1f9c52);color:#06180c">TEKRAR OYNA</button>
+</div>
+
+<div id="loseMenu" class="overlay hidden">
+  <div class="oTitle" style="font-size:36px">KOCA AYAK SENİ YAKALADI</div>
+  <div class="oText">Sis karardı... ormanın derinliklerine sürüklendin.</div>
+  <button class="btn" id="btnRetry">TEKRAR DENE</button>
+</div>
+
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+var reportErr = function(msg){
+  var d = document.getElementById('err');
+  if(d){ d.style.display = 'block'; d.textContent += (msg || '') + '\n'; }
+};
+window.addEventListener('error', function(e){ reportErr('ERR: ' + (e.message || e.type)); });
+window.addEventListener('unhandledrejection', function(e){ reportErr('REJ: ' + e.reason); });
+
+function $(id){ return document.getElementById(id); }
+
+var errBox = $('err');
+function diag(t){ if(errBox){ errBox.textContent = t; errBox.style.display = 'block'; } }
+
+var renderer = new THREE.WebGLRenderer({ canvas: $('c3d'), antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+var scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0a0410, 1/95);
+var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2600);
+camera.rotation.order = 'YXZ';
+
+var MOON_POS = new THREE.Vector3(60, 120, -880);
+var BOUND = 340;
+var PLAY_R = 0.7;
+var BF_R = 1.5;
+var EYE_H = 1.7;
+var WALK_SPEED = 9;
+var SPRINT_SPEED = 17;
+var STAM_MAX = 150;
+var STAM_COST = 15;
+var STAM_REGEN = 20;
+var STAM_REGEN_DELAY = 0.7;
+var JUMP_V = 8.2;
+var GRAV = -26;
+
+function rand(a, b){ return a + Math.random() * (b - a); }
+function pick(arr){ return arr[(Math.random() * arr.length) | 0]; }
+function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+function lerp(a, b, t){ return a + (b - a) * t; }
+
+function hash2(x, z){ var n = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return n - Math.floor(n); }
+function sstep(t){ return t * t * (3 - 2 * t); }
+function vnoise(x, z){
+  var ix = Math.floor(x), iz = Math.floor(z);
+  var fx = x - ix, fz = z - iz;
+  var a = hash2(ix, iz), b = hash2(ix + 1, iz), c = hash2(ix, iz + 1), d = hash2(ix + 1, iz + 1);
+  var ux = sstep(fx), uz = sstep(fz);
+  return a + (b - a) * ux + (c - a) * uz + (a - b - c + d) * ux * uz;
+}
+function fbm(x, z){
+  return vnoise(x * 0.045, z * 0.045) * 1.4 + vnoise(x * 0.16, z * 0.16) * 0.5 + vnoise(x * 0.012, z * 0.012) * 2.2;
+}
+function terrainH(x, z){ return (fbm(x, z) - 2.1) * 1.15; }
+
+function pathX(z){ return 30 * Math.sin(z * 0.016); }
+
+function texWrap(cv, rx, ry){
+  var t = new THREE.CanvasTexture(cv);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  if (rx) t.repeat.set(rx, ry || 1);
+  try{ t.encoding = THREE.sRGBEncoding; }catch(e){}
+  try{ t.anisotropy = 4; }catch(e){}
+  return t;
+}
+function makeFragTex(w, h, fn){
+  var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  var g = cv.getContext('2d');
+  var img = g.createImageData(w, h);
+  var d = img.data;
+  for (var y = 0; y < h; y++){
+    for (var x = 0; x < w; x++){
+      var c = fn(x / w, y / h, x, y);
+      var i = (y * w + x) * 4;
+      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
+      d[i + 3] = c.length > 3 ? c[3] : 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return cv;
+}
+var TEX = {};
+(function buildTextures(){
+  TEX.bark = texWrap(makeFragTex(128, 128, function(ux, uy){
+    var t = clamp(vnoise(ux * 9, uy * 3) * 0.62 + vnoise(ux * 36, uy * 14) * 0.38, 0, 1);
+    var r = 34 + t * 56 + (t > 0.72 ? 12 : 0);
+    if (uy < 0.04) r *= 1.28;
+    return [r, r * 0.58, r * 0.40];
+  }), 6, 3);
+  TEX.foliage = texWrap(makeFragTex(128, 128, function(ux, uy){
+    var n = clamp(vnoise((ux + 3.7) * 8, (uy + 1.3) * 8) * 0.7 + vnoise((ux + 9.2) * 22, (uy + 2.1) * 22) * 0.3, 0, 1);
+    if (uy < 0.18) return [5, 9, 6];
+    if (n > 0.62) return [30, 48, 28];
+    if (n < 0.4) return [7, 12, 8];
+    return [16, 30, 18];
+  }), 1, 1);
+  TEX.ground = texWrap(makeFragTex(256, 256, function(ux, uy, x, y){
+    var n = clamp(vnoise(ux * 10, uy * 10) * 0.6 + vnoise(ux * 37, uy * 37) * 0.4, 0, 1);
+    var leaf = hash2(x * 9.7, y * 13.1);
+    if (leaf > 0.987) return [58, 30, 16];
+    if (n > 0.72) return [62, 60, 51];
+    if (n < 0.24) return [11, 13, 9];
+    return [24 + n * 10, 27 + n * 10, 16 + n * 6];
+  }), 26, 26);
+  TEX.path = texWrap(makeFragTex(128, 128, function(ux, uy){
+    var n = clamp(vnoise(ux * 7, uy * 7) * 0.6 + vnoise(ux * 26, uy * 26) * 0.4, 0, 1);
+    var edge = 1 - Math.abs(ux - 0.5) * 1.8;
+    var r = (72 + n * 46) * (0.62 + edge * 0.5);
+    return [r, r * 0.72, r * 0.50];
+  }), 1, 24);
+  TEX.rock = texWrap(makeFragTex(128, 128, function(ux, uy){
+    var n = clamp(vnoise(ux * 8, uy * 8) * 0.6 + vnoise(ux * 34, uy * 34) * 0.4, 0, 1);
+    if (n < 0.22) return [25, 25, 31];
+    var r = 52 + n * 44 + (n > 0.78 ? 15 : 0);
+    return [r, r * 0.97, r * 1.08];
+  }), 1, 1);
+  TEX.moon = texWrap(makeFragTex(128, 128, function(ux, uy){
+    var n = clamp(vnoise(ux * 22, uy * 22), 0, 1);
+    return [152 + n * 48, 30 + n * 12, 24 + n * 8];
+  }), 1, 1);
+  TEX.mud = texWrap(makeFragTex(128, 128, function(ux, uy){
+    var n = clamp(vnoise(ux * 9, uy * 9), 0, 1);
+    var r = 4 + n * 6, g2 = 6 + n * 8, b2 = 11 + n * 13;
+    if (n > 0.68){ r += 5; g2 += 8; b2 += 14; }
+    return [r, g2, b2];
+  }), 1, 1);
+  TEX.plank = texWrap(makeFragTex(128, 128, function(ux, uy){
+    var seam = (ux % 0.25) * 4;
+    var n = clamp(vnoise(ux * 26, uy * 9) * 0.6 + vnoise(ux * 60, uy * 26) * 0.4, 0, 1);
+    var r = (62 + n * 36) * (seam < 0.12 ? 0.48 : 0.94);
+    return [r, r * 0.66, r * 0.44];
+  }), 1, 2);
+  var fcv = document.createElement('canvas'); fcv.width = 128; fcv.height = 128;
+  var fg = fcv.getContext('2d');
+  fg.fillStyle = '#1a1009'; fg.fillRect(0, 0, 128, 128);
+  var furCols = ['#120a06', '#241810', '#2d1f12', '#0d0805', '#332312', '#1f140c'];
+  for (var fi2 = 0; fi2 < 4600; fi2++){
+    fg.fillStyle = furCols[(Math.random() * furCols.length) | 0];
+    fg.fillRect(Math.random() * 128, Math.random() * 128, 2 + Math.random() * 3, 1);
+  }
+  TEX.fur = new THREE.CanvasTexture(fcv);
+  TEX.fur.wrapS = THREE.RepeatWrapping; TEX.fur.wrapT = THREE.RepeatWrapping;
+  try{ TEX.fur.encoding = THREE.sRGBEncoding; }catch(e){}
+})();
+
+var HEMI = new THREE.HemisphereLight(0x10142a, 0x0d0a07, 0.8);
+scene.add(HEMI);
+var AMB = new THREE.AmbientLight(0x10101c, 0.62);
+scene.add(AMB);
+
+var moonLight = new THREE.DirectionalLight(0xff3420, 0.66);
+moonLight.castShadow = true;
+moonLight.shadow.mapSize.set(2048, 2048);
+moonLight.shadow.camera.near = 10;
+moonLight.shadow.camera.far = 900;
+moonLight.shadow.camera.left = -170;
+moonLight.shadow.camera.right = 170;
+moonLight.shadow.camera.top = 170;
+moonLight.shadow.camera.bottom = -170;
+moonLight.shadow.bias = -0.002;
+scene.add(moonLight);
+scene.add(moonLight.target);
+
+var flashLight = new THREE.SpotLight(0xffcf8a, 2.0, 90, 0.52, 0.55, 1.3);
+flashLight.castShadow = true;
+flashLight.shadow.mapSize.set(1024, 1024);
+flashLight.shadow.bias = -0.003;
+var flashTarget = new THREE.Object3D();
+scene.add(flashTarget);
+flashLight.target = flashTarget;
+scene.add(flashLight);
+
+var flashCone = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 3.4, 42, 16, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.05,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+flashCone.rotation.x = -Math.PI / 2;
+flashCone.position.z = -24;
+flashCone.frustumCulled = false;
+camera.add(flashCone);
+scene.add(camera);
+
+var skyTex = (function(){
+  var c = document.createElement('canvas'); c.width = 8; c.height = 512;
+  var g = c.getContext('2d');
+  var gr = g.createLinearGradient(0, 0, 0, 512);
+  gr.addColorStop(0.0, '#000004');
+  gr.addColorStop(0.35, '#07040f');
+  gr.addColorStop(0.62, '#0e0612');
+  gr.addColorStop(0.85, '#18080f');
+  gr.addColorStop(1.0, '#0b040d');
+  g.fillStyle = gr; g.fillRect(0, 0, 8, 512);
+  var t = new THREE.CanvasTexture(c); t.needsUpdate = true;
+  return t;
+})();
+skyTex.magFilter = THREE.LinearFilter;
+scene.background = skyTex;
+
+var glowTex = (function(){
+  var c = document.createElement('canvas'); c.width = 256; c.height = 256;
+  var g = c.getContext('2d');
+  var gr = g.createRadialGradient(128, 128, 4, 128, 128, 128);
+  gr.addColorStop(0, 'rgba(255,120,70,1)');
+  gr.addColorStop(0.25, 'rgba(220,50,30,0.75)');
+  gr.addColorStop(0.6, 'rgba(120,10,10,0.25)');
+  gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  return new THREE.CanvasTexture(c);
+})();
+var spotTex = (function(){
+  var c = document.createElement('canvas'); c.width = 128; c.height = 128;
+  var g = c.getContext('2d');
+  var gr = g.createRadialGradient(64, 64, 2, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(255,255,255,1)');
+  gr.addColorStop(0.3, 'rgba(255,255,255,0.4)');
+  gr.addColorStop(0.7, 'rgba(255,255,255,0.07)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
+var fogTex = (function(){
+  var c = document.createElement('canvas'); c.width = 128; c.height = 128;
+  var g = c.getContext('2d');
+  var gr = g.createRadialGradient(64, 64, 6, 64, 64, 62);
+  gr.addColorStop(0, 'rgba(190,196,215,0.85)');
+  gr.addColorStop(0.55, 'rgba(150,150,175,0.35)');
+  gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
+
+var moon = new THREE.Mesh(
+  new THREE.SphereGeometry(11, 40, 40),
+  new THREE.MeshBasicMaterial({ map: TEX.moon })
+);
+moon.position.copy(MOON_POS);
+moon.material.fog = false;
+scene.add(moon);
+var moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: glowTex, color: 0xff5540, transparent: true, opacity: 0.85,
+  blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+}));
+moonGlow.position.copy(MOON_POS);
+moonGlow.scale.set(320, 320, 1);
+scene.add(moonGlow);
+
+var starGeo = new THREE.BufferGeometry();
+var starArr = [];
+for (var si = 0; si < 1300; si++){
+  var ang = rand(0, Math.PI * 2), ry = rand(0, 1.45), rad = rand(900, 1500);
+  var y = Math.cos(ang) * Math.sin(ry) * rad + 80;
+  var x = Math.sin(ang) * Math.sin(ry) * rad * 0.9;
+  var z = -Math.cos(ry) * rad;
+  starArr.push(x, y, z);
+}
+starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starArr, 3));
+var stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
+  color: 0xaab8d8, size: 1.6, sizeAttenuation: true, transparent: true,
+  opacity: 0.85, depthWrite: false, fog: false
+}));
+scene.add(stars);
+
+function buildRingGrad(inner, outer){
+  var c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  var g = c.getContext('2d');
+  var gr = g.createRadialGradient(32, 32, 6, 32, 32, 32);
+  gr.addColorStop(0, inner); gr.addColorStop(1, outer);
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+
+var groundGeo = new THREE.PlaneGeometry(710, 710, 180, 180);
+groundGeo.rotateX(-Math.PI / 2);
+var gPos = groundGeo.attributes.position;
+var gCol = [];
+var col = new THREE.Color();
+for (var gi = 0; gi < gPos.count; gi++){
+  var gx = gPos.getX(gi), gz = gPos.getZ(gi);
+  var hg = terrainH(gx, gz);
+  gPos.setY(gi, hg);
+  var shade = 0.76 + 0.24 * clamp(0.3 + vnoise(gx * 0.05, gz * 0.05) + 0.3 * vnoise(gx * 0.7, gz * 0.7) * 0.7, 0, 1);
+  col.setRGB(shade, shade, shade);
+  gCol.push(col.r, col.g, col.b);
+}
+groundGeo.setAttribute('color', new THREE.Float32BufferAttribute(gCol, 3));
+groundGeo.computeVertexNormals();
+var ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({
+  map: TEX.ground, vertexColors: true, roughness: 1, metalness: 0
+}));
+ground.receiveShadow = true;
+scene.add(ground);
+
+var pathGroup = new THREE.Group();
+var PATH_W = 3.4;
+(function buildPath(){
+  var pts = [];
+  for (var z = 260; z > -250; z -= 5) pts.push(z);
+  var arr = [], uvArr = [], idx = [];
+  for (var i = 0; i < pts.length; i++){
+    var z0 = pts[i];
+    var x0 = pathX(z0);
+    var h0 = terrainH(x0, z0) + 0.08;
+    arr.push(x0 - PATH_W, h0, z0, x0 + PATH_W, h0, z0);
+    uvArr.push(0, i / (pts.length - 1), 1, i / (pts.length - 1));
+    if (i < pts.length - 1){
+      var a = i * 2;
+      idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvArr, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  var p = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+    map: TEX.path, roughness: 1, metalness: 0
+  }));
+  p.receiveShadow = true;
+  p.renderOrder = 1;
+  pathGroup.add(p);
+  var gr2 = g.clone();
+  var gr3 = new THREE.Mesh(gr2, new THREE.MeshStandardMaterial({
+    color: 0x000000, roughness: 1, transparent: true, opacity: 0.25
+  }));
+  gr3.position.y = -0.08;
+  pathGroup.add(gr3);
+})();
+pathGroup.name = 'path';
+scene.add(pathGroup);
+
+var trunkGeo = new THREE.CylinderGeometry(0.32, 0.5, 2.6, 6);
+var crownLowGeo = new THREE.ConeGeometry(2.3, 5.5, 8);
+var crownMidGeo = new THREE.ConeGeometry(1.7, 4.4, 8);
+var crownTopGeo = new THREE.ConeGeometry(1.2, 3.6, 8);
+var branchGeo = new THREE.CylinderGeometry(0.07, 0.11, 1.8, 5);
+var trunkMat = new THREE.MeshStandardMaterial({ map: TEX.bark, color: 0xa89a86, roughness: 1, flatShading: true });
+var crownMat = new THREE.MeshStandardMaterial({ map: TEX.foliage, roughness: 1, flatShading: true });
+var deadMat = new THREE.MeshStandardMaterial({ map: TEX.bark, color: 0x8b8078, roughness: 1, flatShading: true });
+
+var TREE_N = 1900;
+var treeTrunks = new THREE.InstancedMesh(trunkGeo, trunkMat, TREE_N);
+var treeCrownL = new THREE.InstancedMesh(crownLowGeo, crownMat, TREE_N);
+var treeCrownM = new THREE.InstancedMesh(crownMidGeo, crownMat, TREE_N);
+var treeCrownT = new THREE.InstancedMesh(crownTopGeo, crownMat, TREE_N);
+var deadTrees = new THREE.InstancedMesh(trunkGeo, deadMat, 380);
+var deadBranches = new THREE.InstancedMesh(branchGeo, deadMat, 800);
+var bushGeo = new THREE.IcosahedronGeometry(0.7, 0);
+var bushMat = new THREE.MeshStandardMaterial({ map: TEX.foliage, color: 0x99a88e, roughness: 1, flatShading: true });
+var bushes = new THREE.InstancedMesh(bushGeo, bushMat, 520);
+var rockGeo = new THREE.DodecahedronGeometry(0.9, 0);
+var rockMat = new THREE.MeshStandardMaterial({ map: TEX.rock, roughness: 1, flatShading: true });
+var smallRocks = new THREE.InstancedMesh(rockGeo, rockMat, 340);
+var grassGeo = new THREE.ConeGeometry(0.17, 0.65, 5);
+var grassMat = new THREE.MeshStandardMaterial({ map: TEX.foliage, color: 0x6e7d58, roughness: 1, flatShading: true });
+var grasses = new THREE.InstancedMesh(grassGeo, grassMat, 1700);
+[treeTrunks, treeCrownL, treeCrownM, treeCrownT, deadTrees, deadBranches, bushes, smallRocks, grasses].forEach(function(m){ m.castShadow = true; m.receiveShadow = true; scene.add(m); });
+
+var seedClusters = [];
+for (var cI = 0; cI < 46; cI++) seedClusters.push({ x: rand(-330, 330), z: rand(-330, 330) });
+
+function nearCorridor(x, z){
+  var dz = Math.abs(z - pathX(z));
+  var dx = Math.abs(x - pathX(z));
+  return dx < 20 || dist2(x, z, pathX(z), z) < 20 * 20 || dist2(x, z, pathX(z + 8), z + 8) < 20 * 20 || dist2(x, z, pathX(z - 8), z - 8) < 20 * 20;
+}
+function dist2(x1, z1, x2, z2){ var dx = x1 - x2, dz = z1 - z2; return dx * dx + dz * dz; }
+
+var clearZones = [{ x: pathX(-243), z: -243, r: 40 }, { x: pathX(256), z: 256, r: 42 }];
+function nearClear(x, z){
+  for (var i = 0; i < clearZones.length; i++) if (dist2(x, z, clearZones[i].x, clearZones[i].z) < clearZones[i].r * clearZones[i].r) return true;
+  return false;
+}
+
+var treePositions = [];
+(function placeFlora(){
+  var M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), S = new THREE.Vector3(), P = new THREE.Vector3();
+  var nTree = 0, nDead = 0, nBush = 0, nRock = 0, nGrass = 0, nDeadBr = 0;
+  for (var i = 0; i < TREE_N; i++){
+    var cl = seedClusters[(Math.random() * seedClusters.length) | 0];
+    var x = cl.x + (Math.random() - 0.5) * 90;
+    var z = cl.z + (Math.random() - 0.5) * 90;
+    x = clamp(x, -332, 332); z = clamp(z, -332, 332);
+    if (nearCorridor(x, z) || nearClear(x, z)) continue;
+    var h = terrainH(x, z);
+    var s = rand(0.75, 1.5);
+    E.set(rand(0, Math.PI), rand(0, Math.PI), 0);
+    Q.setFromEuler(E);
+    P.set(x, h, z);
+    S.set(1, s, 1);
+    M.compose(P, Q, S);
+    treeTrunks.setMatrixAt(nTree, M);
+    P.y = h + 3.4 * s; M.compose(P, Q, S); treeCrownL.setMatrixAt(nTree, M);
+    P.y = h + 5.8 * s; M.compose(P, Q, S); treeCrownM.setMatrixAt(nTree, M);
+    P.y = h + 8.0 * s; M.compose(P, Q, S); treeCrownT.setMatrixAt(nTree, M);
+    treePositions.push({ x: x, z: z, r: 0.8 });
+    nTree++;
+    if (Math.random() < 0.4){
+      P.set(x + rand(-1.5, 1.5), h + rand(0, 0.4), z + rand(-1.5, 1.5));
+      S.set(1, rand(0.5, 1.4), 1);
+      E.set(0, rand(0, Math.PI), 0);
+      Q.setFromEuler(E);
+      M.compose(P, Q, S);
+      bushes.setMatrixAt(nBush, M);
+      nBush++;
+    }
+  }
+  for (var d = 0; d < 380; d++){
+    var x2 = rand(-332, 332), z2 = rand(-332, 332);
+    if (nearCorridor(x2, z2) || nearClear(x2, z2)) continue;
+    var h2 = terrainH(x2, z2);
+    var s2 = rand(0.6, 1.4);
+    E.set(rand(0.15, 0.35), rand(0, Math.PI * 2), rand(-0.15, 0));
+    Q.setFromEuler(E);
+    P.set(x2, h2, z2);
+    S.set(0.7, s2 + 0.35, 0.7);
+    M.compose(P, Q, S);
+    deadTrees.setMatrixAt(nDead, M);
+    nDead++;
+    for (var bi = 0; bi < 2; bi++){
+      E.set(rand(0.3, 0.9), rand(0, Math.PI * 2), 0);
+      Q.setFromEuler(E);
+      P.set(x2, h2 + rand(0.6, 1.7) * s2, z2);
+      S.set(1, rand(0.4, 1), 1);
+      M.compose(P, Q, S);
+      deadBranches.setMatrixAt(nDeadBr, M);
+      nDeadBr++;
+    }
+  }
+  for (var r = 0; r < 340; r++){
+    var x3 = rand(-332, 332), z3 = rand(-332, 332);
+    if (nearCorridor(x3, z3)) continue;
+    var h3 = terrainH(x3, z3);
+    var s3 = rand(0.3, 1.1);
+    E.set(rand(0, Math.PI), rand(0, Math.PI * 2), rand(0, Math.PI));
+    Q.setFromEuler(E);
+    P.set(x3, h3, z3);
+    S.set(s3, s3 * 0.8, s3);
+    M.compose(P, Q, S);
+    smallRocks.setMatrixAt(nRock, M);
+    nRock++;
+  }
+  for (var gr = 0; gr < 1700; gr++){
+    var gz = rand(-245, 255);
+    var gx = pathX(gz) + (Math.random() - 0.5) * 30;
+    if (Math.random() < 0.38){ gx = rand(-330, 330); gz = rand(-330, 330); }
+    if (nearClear(gx, gz)) continue;
+    var gh = terrainH(gx, gz);
+    var gs = rand(0.5, 1.5);
+    E.set(rand(-0.18, 0.18), rand(0, Math.PI * 2), rand(-0.18, 0.18));
+    Q.setFromEuler(E);
+    P.set(gx, gh + 0.32 * gs, gz);
+    S.set(1, gs, 1);
+    M.compose(P, Q, S);
+    grasses.setMatrixAt(nGrass, M);
+    nGrass++;
+  }
+  treeTrunks.count = nTree;
+  treeCrownL.count = nTree;
+  treeCrownM.count = nTree;
+  treeCrownT.count = nTree;
+  deadTrees.count = nDead;
+  deadBranches.count = nDeadBr;
+  bushes.count = nBush;
+  smallRocks.count = nRock;
+  grasses.count = nGrass;
+  treeTrunks.instanceMatrix.needsUpdate = true;
+  treeCrownL.instanceMatrix.needsUpdate = true;
+  treeCrownM.instanceMatrix.needsUpdate = true;
+  treeCrownT.instanceMatrix.needsUpdate = true;
+  deadTrees.instanceMatrix.needsUpdate = true;
+  deadBranches.instanceMatrix.needsUpdate = true;
+  bushes.instanceMatrix.needsUpdate = true;
+  smallRocks.instanceMatrix.needsUpdate = true;
+  grasses.instanceMatrix.needsUpdate = true;
+})();
+
+var treeCull = new THREE.Mesh(new THREE.SphereGeometry(1, 4, 4), new THREE.MeshBasicMaterial({ visible: false }));
+treeCull.position.set(0, 100, 0);
+scene.add(treeCull);
+
+var fireGeo = new THREE.BufferGeometry();
+var FIRE_N = 130;
+var fireArr = new Float32Array(FIRE_N * 3);
+var fireBase = [];
+for (var fi = 0; fi < FIRE_N; fi++){
+  var fh = terrainH(pathX(rand(-250, 250)), rand(-250, 250)) + rand(0.4, 2.6);
+  fireArr[fi * 3] = rand(-340, 340);
+  fireArr[fi * 3 + 1] = fh;
+  fireArr[fi * 3 + 2] = rand(-340, 340);
+  fireBase.push(fh + rand(0, 0.2));
+}
+fireGeo.setAttribute('position', new THREE.BufferAttribute(fireArr, 3));
+var fireflies = new THREE.Points(fireGeo, new THREE.PointsMaterial({
+  color: 0xffdd66, size: 0.22, sizeAttenuation: true, transparent: true,
+  opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false
+}));
+scene.add(fireflies);
+
+var fogSprites = [];
+(function(){
+  for (var i = 0; i < 26; i++){
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: fogTex, color: 0x7a7f92, transparent: true, opacity: rand(0.12, 0.3),
+      depthWrite: false, fog: false
+    }));
+    sp.position.set(rand(-340, 340), rand(0.5, 7), rand(-340, 340));
+    var s = rand(10, 34);
+    sp.scale.set(s, s * 0.6, 1);
+    sp.userData = { speed: rand(0.6, 1.8), drift: rand(0.2, 0.6) };
+    scene.add(sp);
+    fogSprites.push(sp);
+  }
+})();
+
+var colliders = [];
+var obsId = 0;
+function makeCollider(x, z, r, top, type){
+  colliders.push({ id: obsId++, x: x, z: z, r: r, top: top, type: type || 'solid' });
+  return colliders[colliders.length - 1];
+}
+
+var logMat = new THREE.MeshStandardMaterial({ map: TEX.bark, roughness: 1, flatShading: true });
+var woodMat = new THREE.MeshStandardMaterial({ map: TEX.plank, roughness: 1, flatShading: true });
+var stoneMat = new THREE.MeshStandardMaterial({ map: TEX.rock, roughness: 1, flatShading: true });
+var darkLogMat = new THREE.MeshStandardMaterial({ map: TEX.bark, color: 0x8f8f9f, roughness: 1, flatShading: true });
+var mudMat = new THREE.MeshBasicMaterial({ map: TEX.mud });
+var reedMat = new THREE.MeshStandardMaterial({ map: TEX.foliage, color: 0x9fb09a, roughness: 1, flatShading: true });
+var glowStoneMat = new THREE.MeshStandardMaterial({ map: TEX.rock, color: 0xbbbbc4, emissive: 0x20242a, roughness: 1, flatShading: true });
+
+function placeFallenTree(x, z, len, ang, h){
+  var y = terrainH(x, z);
+  var log = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, len, 8), logMat);
+  log.position.set(x, y + 0.55, z);
+  log.rotation.set(0, ang, Math.PI / 2);
+  log.castShadow = true; log.receiveShadow = true;
+  scene.add(log);
+  var rootDir = Math.random() < 0.5 ? 1 : -1;
+  var root = new THREE.Mesh(new THREE.SphereGeometry(0.85, 8, 6), logMat);
+  root.position.set(x + Math.cos(ang) * (len / 2 - 1.05) * rootDir, y + 0.5, z + Math.sin(ang) * (len / 2 - 1.05) * rootDir);
+  root.scale.set(1.35, 1, 1.2);
+  root.castShadow = true;
+  scene.add(root);
+  for (var ri2 = 0; ri2 < 4; ri2++){
+    var stump = new THREE.Mesh(new THREE.ConeGeometry(rand(0.16, 0.3), rand(0.5, 1.1), 5), logMat);
+    var ra2 = rootDir * (ri2 === 0 ? 1.4 : -1);
+    stump.position.set(root.position.x + rand(-0.9, 0.9), y + 0.2, root.position.z + rand(-0.9, 0.9));
+    stump.rotation.set(rand(0.2, 1.1), 0, rand(-0.6, 0.6));
+    stump.castShadow = true;
+    scene.add(stump);
+  }
+  var d = 0.95;
+  var half = len / 2 - 1;
+  for (var off = -half; off <= half; off += d){
+    var bx = x + Math.cos(ang) * off;
+    var bz = z + Math.sin(ang) * off;
+    makeCollider(bx, bz, 0.55, h, 'solid');
+  }
+}
+
+function placeStump(x, z){
+  var y = terrainH(x, z);
+  var t = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.7, 1.1, 7), logMat);
+  t.position.set(x, y + 0.55, z);
+  t.rotation.y = rand(0, Math.PI);
+  t.castShadow = true; scene.add(t);
+  makeCollider(x, z, 0.7, 1.0, 'solid');
+}
+
+function placeBoulder(x, z, r){
+  var y = terrainH(x, z);
+  var b = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), stoneMat);
+  b.position.set(x, y + r * 0.7, z);
+  b.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3));
+  b.scale.y = rand(0.75, 1.1);
+  b.castShadow = true; b.receiveShadow = true;
+  scene.add(b);
+  makeCollider(x, z, r * 0.95, r * 1.5 + 1.2, 'solid');
+}
+
+function placeFence(x, z){
+  var y = terrainH(x, z);
+  var W = 15;
+  var rail = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, W, 6), woodMat);
+  rail.position.set(x, y + 1.0, z);
+  rail.rotation.z = Math.PI / 2;
+  rail.castShadow = true; scene.add(rail);
+  for (var ox = -6.6; ox <= 6.6; ox += 2.2){
+    var px = x + ox;
+    var post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.5, 6), woodMat);
+    post.position.set(px, y + 0.75, z);
+    post.castShadow = true; scene.add(post);
+    makeCollider(px, z, 0.85, 1.08, 'solid');
+  }
+}
+
+function placeDebris(x, z){
+  var y = terrainH(x, z);
+  for (var i = 0; i < 4; i++){
+    var len = rand(2.4, 4);
+    var ang = rand(0, Math.PI);
+    var log = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, len, 7), logMat);
+    var lx = x + rand(-2, 2), lz = z + rand(-2, 2);
+    log.position.set(lx, y + 0.5, lz);
+    log.rotation.set(0, ang, Math.PI / 2);
+    log.castShadow = true; scene.add(log);
+  }
+  var bx = new THREE.Mesh(new THREE.BoxGeometry(rand(1.6, 2.6), rand(0.5, 0.8), rand(0.8, 1.4)), darkLogMat);
+  bx.position.set(x, y + 0.6, z);
+  bx.rotation.y = rand(0, Math.PI);
+  bx.castShadow = true; scene.add(bx);
+  makeCollider(x - 1.4, z, 0.9, 1.2, 'solid');
+  makeCollider(x, z, 0.9, 1.25, 'solid');
+  makeCollider(x + 1.4, z, 0.9, 1.2, 'solid');
+}
+
+function placeMudPit(x, z, r){
+  var y = terrainH(x, z);
+  var mud = new THREE.Mesh(new THREE.CircleGeometry(r, 26), mudMat);
+  mud.rotation.x = -Math.PI / 2;
+  mud.position.set(x, y + 0.06, z);
+  scene.add(mud);
+  var rim = new THREE.Mesh(new THREE.CircleGeometry(r * 1.12, 26), new THREE.MeshStandardMaterial({ color: 0x0f0d08, roughness: 1 }));
+  rim.rotation.x = -Math.PI / 2;
+  rim.position.set(x, y + 0.045, z);
+  scene.add(rim);
+  for (var i = 0; i < 9; i++){
+    var a = (i / 9) * Math.PI * 2;
+    var reed = new THREE.Mesh(new THREE.ConeGeometry(0.12, rand(0.9, 1.7), 4), reedMat);
+    reed.position.set(x + Math.cos(a) * r * rand(0.75, 1.05), y + 0.7, z + Math.sin(a) * r * rand(0.75, 1.05));
+    reed.rotation.z = rand(-0.25, 0.25);
+    reed.castShadow = true; scene.add(reed);
+  }
+  makeCollider(x, z, r, 0, 'slow');
+}
+
+function placeBridge(x, z){
+  var y = terrainH(x, z);
+  var r = rand(3.6, 5);
+  for (var pass = 0; pass < 2; pass++){
+    var off = pass === 0 ? 1.8 : -1.8;
+    var mud = new THREE.Mesh(new THREE.CircleGeometry(r * 0.9, 22), mudMat);
+    mud.rotation.x = -Math.PI / 2;
+    mud.position.set(x, y + 0.06, z + off);
+    scene.add(mud);
+    makeCollider(x, z + off, r * 0.9, 0, 'slow');
+  }
+  var px = [x - 2.2, x + 2.2, x - 0.8, x + 0.8];
+  for (var i = 0; i < 2; i++){
+    var log = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 6, 7), logMat);
+    log.position.set(px[i], y + 0.5, z);
+    log.rotation.set(0, 0, Math.PI / 2);
+    log.castShadow = true; scene.add(log);
+    makeCollider(px[i], z, 0.6, 1.0, 'solid');
+  }
+  var plank = new THREE.Mesh(new THREE.BoxGeometry(8, 0.18, 0.7), woodMat);
+  plank.position.set(x - 2.2, y + 0.95, z + 3.2);
+  plank.castShadow = true; scene.add(plank);
+  var plank2 = plank.clone();
+  plank2.position.set(x + 1.2, y + 0.95, z - 3.4);
+  scene.add(plank2);
+}
+
+var obstaclePlan = [];
+(function buildCourse(){
+  var z = 225;
+  var i = 0;
+  while (z > -205){
+    var r = Math.random();
+    var x = pathX(z) + rand(-4.5, 4.5);
+    var kind;
+    if (i < 3) kind = r < 0.5 ? 'log' : 'rock';
+    else if (r < 0.22) kind = 'log';
+    else if (r < 0.42) kind = 'fence';
+    else if (r < 0.62) kind = 'rock';
+    else if (r < 0.8) kind = 'debris';
+    else if (r < 0.92) kind = 'pit';
+    else kind = 'bridge';
+    obstaclePlan.push({ kind: kind, x: x, z: z });
+    var side = Math.random();
+    if (side < 0.3){
+      var sx = pathX(z) + (Math.random() < 0.5 ? -1 : 1) * rand(9, 18);
+      if (Math.hypot(sx - x, 0) > 6) obstaclePlan.push({ kind: 'rock', x: sx, z: z, silent: true });
+    }
+    if (side < 0.65){
+      var kind2 = r < 0.35 ? 'log' : 'debris';
+      obstaclePlan.push({ kind: kind2, x: pathX(z - 6) + rand(-4, 4), z: z - 6, silent: true });
+    }
+    z -= rand(13, 20);
+    i++;
+  }
+})();
+
+(function placeObstacles(){
+  for (var i = 0; i < obstaclePlan.length; i++){
+    var o = obstaclePlan[i];
+    var y = terrainH(o.x, o.z);
+    if (o.kind === 'log') placeFallenTree(o.x, o.z, rand(6, 9), rand(-0.5, 0.5), 0.95);
+    else if (o.kind === 'rock'){
+      placeBoulder(o.x, o.z, rand(1.1, 2.0));
+      if (Math.random() < 0.45){
+        placeBoulder(o.x + rand(3.5, 5.5), o.z + rand(1.5, 3.5), rand(0.9, 1.6));
+        placeBoulder(o.x - rand(3.5, 5.5), o.z - rand(1.5, 3.5), rand(0.8, 1.4));
+      }
+    }
+    else if (o.kind === 'fence') placeFence(o.x, o.z);
+    else if (o.kind === 'debris') placeDebris(o.x, o.z);
+    else if (o.kind === 'pit') placeMudPit(o.x, o.z, rand(2.6, 4.2));
+    else if (o.kind === 'bridge') placeBridge(o.x, o.z);
+    if (!o.silent && Math.random() < 0.4) placeStump(o.x + rand(-5, 5), o.z + rand(-6, -2));
+  }
+  for (var s = 0; s < 22; s++){
+    var sx = pathX(rand(-230, 230)) + (Math.random() < 0.5 ? -1 : 1) * rand(22, 60);
+    var sz = rand(-230, 230);
+    if (nearClear(sx, sz)) continue;
+    if (Math.random() < 0.6) placeBoulder(sx, sz, rand(0.8, 1.6));
+    else placeMudPit(sx, sz, rand(2, 3.4));
+  }
+})();
+
+var EXIT = { x: pathX(-244), z: -244 };
+(function buildExit(){
+  var y = terrainH(EXIT.x, EXIT.z);
+  var m1 = new THREE.MeshStandardMaterial({ color: 0x3a3f46, roughness: 0.7, metalness: 0.4, emissive: 0x0a1a0a });
+  var pillarGeo = new THREE.BoxGeometry(1.4, 9, 1.4);
+  var p1 = new THREE.Mesh(pillarGeo, glowStoneMat);
+  p1.position.set(EXIT.x - 3.4, y + 4.2, EXIT.z);
+  p1.castShadow = true; scene.add(p1);
+  var p2 = p1.clone();
+  p2.position.x = EXIT.x + 3.4;
+  scene.add(p2);
+  var lintel = new THREE.Mesh(new THREE.BoxGeometry(8.6, 1.2, 1.6), new THREE.MeshStandardMaterial({
+    color: 0x2c3138, emissive: 0x0c2410, roughness: 0.7
+  }));
+  lintel.position.set(EXIT.x, y + 8.8, EXIT.z);
+  lintel.castShadow = true; scene.add(lintel);
+  var emblem = new THREE.Mesh(new THREE.SphereGeometry(0.9, 10, 10), new THREE.MeshBasicMaterial({
+    color: 0x5dff88, fog: false
+  }));
+  emblem.position.set(EXIT.x, y + 10.6, EXIT.z);
+  emblem.frustumCulled = false;
+  scene.add(emblem);
+  var beam = new THREE.Mesh(new THREE.CylinderGeometry(4.4, 5.4, 120, 14, 1, true), new THREE.MeshBasicMaterial({
+    color: 0x9dffb0, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending,
+    depthWrite: false, fog: false, side: THREE.DoubleSide
+  }));
+  beam.position.set(EXIT.x, y + 62, EXIT.z);
+  beam.frustumCulled = false;
+  scene.add(beam);
+  var beamCore = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.6, 130, 10, 1, true), new THREE.MeshBasicMaterial({
+    color: 0xdfffe8, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending,
+    depthWrite: false, fog: false, side: THREE.DoubleSide
+  }));
+  beamCore.position.set(EXIT.x, y + 66, EXIT.z);
+  beamCore.frustumCulled = false;
+  scene.add(beamCore);
+  var beaconLight = new THREE.PointLight(0x5dff88, 1.6, 90, 1.6);
+  beaconLight.position.set(EXIT.x, y + 7, EXIT.z);
+  scene.add(beaconLight);
+  var tw = document.createElement('canvas'); tw.width = 256; tw.height = 128;
+  var tg = tw.getContext('2d');
+  tg.font = 'bold 84px Segoe UI, Arial';
+  tg.textAlign = 'center'; tg.textBaseline = 'middle';
+  tg.fillStyle = '#7dffa0';
+  tg.shadowColor = '#2aff6a'; tg.shadowBlur = 26;
+  tg.fillText('ÇIKIŞ', 128, 64);
+  var tmap = new THREE.CanvasTexture(tw);
+  var label = new THREE.Sprite(new THREE.SpriteMaterial({ map: tmap, transparent: true, depthWrite: false, fog: false }));
+  label.position.set(EXIT.x, y + 12.6, EXIT.z);
+  label.scale.set(16, 8, 1);
+  scene.add(label);
+})();
+
+function buildBigfoot(){
+  var g = new THREE.Group();
+  var fur = new THREE.MeshStandardMaterial({ map: TEX.fur, roughness: 1, flatShading: true });
+  var furDark = new THREE.MeshStandardMaterial({ map: TEX.fur, color: 0x9a9288, roughness: 1, flatShading: true });
+  var clawMat = new THREE.MeshStandardMaterial({ color: 0x2a2118, roughness: 0.8, flatShading: true });
+  var eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2200, fog: false });
+  var teethMat = new THREE.MeshStandardMaterial({ color: 0xcfd2d9, roughness: 0.6 });
+
+  var torso = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 1.35, 5.4, 8), fur);
+  torso.position.y = 5.6;
+  torso.castShadow = true;
+  g.add(torso);
+
+  var belly = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.0, 2.6, 7), furDark);
+  belly.position.set(0, 4.6, 0.75);
+  g.add(belly);
+
+  var pecL = new THREE.Mesh(new THREE.SphereGeometry(0.6, 10, 8), fur);
+  pecL.position.set(-0.66, 6.25, 1.02);
+  pecL.scale.set(1, 0.75, 0.66);
+  pecL.castShadow = true; g.add(pecL);
+  var pecR = pecL.clone();
+  pecR.position.x = 0.66; g.add(pecR);
+
+  var hump = new THREE.Mesh(new THREE.SphereGeometry(0.95, 10, 8), furDark);
+  hump.position.set(0, 7.35, 0.5);
+  hump.scale.set(1.8, 1.15, 1.6);
+  hump.castShadow = true; g.add(hump);
+
+  for (var manI = 0; manI < 8; manI++){
+    var aM = (manI / 8) * Math.PI * 2;
+    var coneM = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.85, 6), furDark);
+    coneM.position.set(Math.cos(aM) * 0.62, 9.55, Math.sin(aM) * 0.62);
+    coneM.rotation.x = -0.85;
+    coneM.castShadow = true; g.add(coneM);
+  }
+  for (var backI = 0; backI < 9; backI++){
+    var coneB = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.0, 6), furDark);
+    coneB.position.set((backI - 4) * 0.3, 7.9 + (backI % 3) * 0.35, -1.0);
+    coneB.rotation.x = -0.55 - (backI % 3) * 0.12;
+    coneB.castShadow = true; g.add(coneB);
+  }
+
+  var head = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 10), fur);
+  head.position.set(0, 9.0, -0.05);
+  head.scale.set(1, 0.95, 0.95);
+  head.castShadow = true;
+  g.add(head);
+  var neck = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 1.05, 1.4, 8), fur);
+  neck.position.set(0, 8.0, 0.05);
+  neck.rotation.x = 0.28;
+  neck.castShadow = true; g.add(neck);
+  var snout = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 0.9), furDark);
+  snout.position.set(0, 8.55, 0.85);
+  g.add(snout);
+  var jaw = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.4, 0.9), furDark);
+  jaw.position.set(0, 8.0, 0.75);
+  g.add(jaw);
+  var teeth = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.18, 0.2), teethMat);
+  teeth.position.set(0, 8.32, 0.88);
+  g.add(teeth);
+  for (var ca = 0; ca < 2; ca++){
+    var can = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.36, 5), teethMat);
+    can.position.set(ca === 0 ? -0.24 : 0.24, 8.52, 1.02);
+    can.rotation.x = -2.9;
+    g.add(can);
+  }
+  var eL = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), eyeMat);
+  eL.position.set(-0.45, 9.15, 0.68);
+  var eR = eL.clone();
+  eR.position.x = 0.45;
+  g.add(eL); g.add(eR);
+  var earL = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 6), furDark);
+  earL.position.set(-0.85, 9.15, 0.1);
+  earL.scale.set(1, 0.7, 0.7);
+  var earR = earL.clone();
+  earR.position.x = 0.85;
+  g.add(earL); g.add(earR);
+  var brow = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.35, 0.55), furDark);
+  brow.position.set(0, 9.35, 0.75);
+  g.add(brow);
+
+  function limb(mat, radA, lenA, radB, lenB){
+    var hip = new THREE.Group();
+    var up = new THREE.Mesh(new THREE.CylinderGeometry(radA, radA * 0.85, lenA, 7), mat);
+    up.position.y = -lenA / 2;
+    up.castShadow = true;
+    hip.add(up);
+    var mus = new THREE.Mesh(new THREE.SphereGeometry(radA * 1.5, 9, 7), mat);
+    mus.position.y = -lenA * 0.42;
+    mus.scale.set(1, 0.8, 1.22);
+    mus.castShadow = true;
+    hip.add(mus);
+    var knee = new THREE.Group();
+    knee.position.y = -lenA;
+    var low = new THREE.Mesh(new THREE.CylinderGeometry(radB * 0.85, radB, lenB, 7), mat);
+    low.position.y = -lenB / 2;
+    low.castShadow = true;
+    knee.add(low);
+    hip.add(knee);
+    var foot = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 1.3), furDark);
+    foot.position.set(0, -lenB, 0.25);
+    knee.add(foot);
+    for (var ci = 0; ci < 3; ci++){
+      var claw = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.42, 5), clawMat);
+      claw.position.set((ci - 1) * 0.21, -0.06, 0.7);
+      claw.rotation.x = Math.PI / 2;
+      foot.add(claw);
+    }
+    return { hip: hip, knee: knee, foot: foot };
+  }
+
+  var legL = limb(fur, 0.75, 2.7, 0.55, 2.6);
+  legL.hip.position.set(-0.85, 3.0, 0);
+  g.add(legL.hip);
+  var legR = limb(fur, 0.75, 2.7, 0.55, 2.6);
+  legR.hip.position.set(0.85, 3.0, 0);
+  g.add(legR.hip);
+
+  var armL = limb(furDark, 0.6, 2.6, 0.5, 2.5);
+  armL.hip.position.set(-2.6, 7.4, 0);
+  var armR = limb(furDark, 0.6, 2.6, 0.5, 2.5);
+  armR.hip.position.set(2.6, 7.4, 0);
+  g.add(armL.hip); g.add(armR.hip);
+
+  g.position.set(0, terrainH(0, 0) - 1.2, 0);
+  g.traverse(function(o){ if (o.isMesh) o.userData.big = true; });
+  scene.add(g);
+  return { g: g, legL: legL, legR: legR, armL: armL, armR: armR, torso: torso, head: head };
+}
+
+var BF = {
+  pos: new THREE.Vector3(),
+  vel: new THREE.Vector3(),
+  phase: 0,
+  dist: 1e9,
+  speed: 0,
+  charging: false,
+  chargeT: 0,
+  roarAcc: rand(2, 5),
+  state: 'stalk',
+  born: 0,
+  model: null
+};
+BF.model = buildBigfoot();
+
+var state = 'menu';
+var px = pathX(256), pz = 256;
+var vx = 0, vz = 0, vy = 0, jy = 0;
+var stamina = STAM_MAX;
+var ry = 0, pitch = 0;
+var lookBack = 0, lookBackT = 0;
+var lastSprint = 0;
+var jumpMark = null;
+var shake = 0, shakePunch = 0;
+var bobT = 0;
+var flashOn = true, nvOn = false;
+var muted = false;
+var keys = {};
+var time = 0;
+var camForward = new THREE.Vector3();
+var camRight = new THREE.Vector3();
+var winShown = false, loseShown = false;
+var stepAcc = 0, stepInterval = 0.3;
+var heartbeatAcc = 0, heartbeatState = 0;
+var breathAcc = 0;
+var howlAcc = rand(8, 16);
+var scratchAcc = 0;
+var firefliesT = 0;
+var roarsPlayed = 0;
+
+var spawnBF = function(){
+  var x0 = pathX(256) - 12, z0 = 296;
+  BF.pos.set(x0, terrainH(x0, z0) + 1, z0);
+  BF.vel.set(0, 0, 0);
+  BF.phase = 0;
+  BF.dist = Math.hypot(px - BF.pos.x, pz - BF.pos.z);
+  BF.state = 'stalk';
+  BF.charging = false;
+  BF.roarAcc = 1.2;
+  BF.born = time;
+};
+
+function resetGame(){
+  px = pathX(256); pz = 256;
+  vx = 0; vz = 0; vy = 0; jy = 0;
+  stamina = STAM_MAX;
+  ry = 0; pitch = 0;
+  lookBack = 0; lookBackT = 0;
+  jumpMark = null;
+  shake = 0; shakePunch = 0;
+  flashOn = true; nvOn = false;
+  winShown = false; loseShown = false;
+  stepAcc = 0; heartbeatAcc = 0;
+  spawnBF();
+  if (nyvOff !== null) nyvOff.style.display = 'none';
+  if (nvScansOff !== null) nvScansOff.style.display = 'none';
+  nvOn = false;
+}
+
+var aCtx = null, master = null, windSrc = null, windGain = null;
+var bfPan = null, noiseBuff = null, noiseBuff2 = null;
+var audioOK = false;
+
+function initAudio(){
+  try{
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { diag('AudioContext yok'); return; }
+    aCtx = new AC();
+    master = aCtx.createGain();
+    master.gain.value = mutableGain();
+    master.connect(aCtx.destination);
+    var len = aCtx.sampleRate * 3;
+    noiseBuff = aCtx.createBuffer(1, len, aCtx.sampleRate);
+    var d = noiseBuff.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    noiseBuff2 = aCtx.createBuffer(1, aCtx.sampleRate, aCtx.sampleRate);
+    var d2 = noiseBuff2.getChannelData(0);
+    for (var j = 0; j < d2.length; j++) d2[j] = Math.random() * 2 - 1;
+    windSrc = aCtx.createBufferSource();
+    windSrc.buffer = noiseBuff;
+    windSrc.loop = true;
+    windGain = aCtx.createGain();
+    windGain.gain.value = 0.05;
+    var windF = aCtx.createBiquadFilter();
+    windF.type = 'lowpass';
+    windF.frequency.value = 340;
+    var windLFO = aCtx.createOscillator();
+    windLFO.frequency.value = 0.09;
+    var windLFOg = aCtx.createGain();
+    windLFOg.gain.value = 0.02;
+    windLFO.connect(windLFOg).connect(windGain.gain);
+    windLFO.start();
+    windSrc.connect(windF).connect(windGain).connect(master);
+    windSrc.start();
+    if (aCtx.createStereoPanner){
+      bfPan = aCtx.createStereoPanner();
+      bfPan.connect(master);
+    }
+    audioOK = true;
+  }catch(e){ reportErr('audio: ' + e.message); }
+}
+function mutableGain(){ return muted ? 0 : 0.9; }
+
+function noiseBurst(dur, freq, q, vol, panV){
+  if (!audioOK) return;
+  try{
+    var s = aCtx.createBufferSource();
+    s.buffer = noiseBuff2;
+    var f = aCtx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = freq;
+    f.Q.value = q || 1;
+    var g = aCtx.createGain();
+    g.gain.value = vol;
+    g.gain.exponentialRampToValueAtTime(0.0001, aCtx.currentTime + dur);
+    s.connect(f); f.connect(g);
+    if (bfPan && panV !== undefined){ g.connect(bfPan); bfPan.pan.value = clamp(panV, -1, 1); }
+    else g.connect(master);
+    s.start();
+    s.stop(aCtx.currentTime + dur + 0.05);
+  }catch(e){}
+}
+function tone(f0, f1, dur, type, vol, panV){
+  if (!audioOK) return;
+  try{
+    var o = aCtx.createOscillator();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(f0, aCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), aCtx.currentTime + dur);
+    var g = aCtx.createGain();
+    g.gain.setValueAtTime(vol || 0.1, aCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, aCtx.currentTime + dur);
+    o.connect(g);
+    if (bfPan && panV !== undefined){ g.connect(bfPan); bfPan.pan.value = clamp(panV, -1, 1); }
+    else g.connect(master);
+    o.start();
+    o.stop(aCtx.currentTime + dur + 0.05);
+  }catch(e){}
+}
+function sfxStep(heavy){
+  noiseBurst(0.12, heavy ? 130 : 110, 1.2, heavy ? 0.5 : 0.32);
+  tone(80, 45, 0.1, 'sine', heavy ? 0.35 : 0.2, 0);
+}
+function sfxJump(){
+  tone(240, 560, 0.14, 'triangle', 0.12);
+  noiseBurst(0.12, 600, 1.5, 0.08);
+}
+function sfxLand(){
+  noiseBurst(0.14, 160, 1.2, 0.2);
+}
+function sfxScrape(){
+  noiseBurst(0.2, 900, 2, 0.16);
+}
+function sfxHeart(subl){
+  tone(subl ? 50 : 68, subl ? 42 : 55, 0.12, 'sine', subl ? 0.55 : 0.5);
+}
+function sfxBreath(){
+  noiseBurst(0.45, 500, 1.4, 0.14);
+}
+function sfxRoar(power){
+  var vol = 0.16 + 0.4 * power;
+  tone(120 * (1 + power * 0.2), 45, 1.1 + power * 0.4, 'sawtooth', vol);
+  noiseBurst(1.4, 320, 0.8, vol * 1.2);
+  setTimeout(function(){
+    if (audioOK) tone(85, 30, 1.2, 'square', vol * 0.7);
+  }, 300);
+}
+function sfxHowl(){
+  tone(620, 300, 1.6, 'sawtooth', 0.05);
+  tone(440, 220, 1.5, 'sawtooth', 0.04);
+}
+function sfxCharge(){
+  tone(200, 60, 0.6, 'sawtooth', 0.4);
+  noiseBurst(0.8, 200, 1, 0.5);
+}
+function sfxCatch(){
+  tone(160, 30, 1.2, 'sawtooth', 0.7);
+  noiseBurst(1.4, 240, 0.8, 0.8);
+  tone(90, 24, 2.2, 'square', 0.5);
+}
+function sfxCheer(){
+  tone(523, 523, 0.5, 'sine', 0.18);
+  setTimeout(function(){ if(audioOK) tone(659, 659, 0.5, 'sine', 0.18); }, 180);
+  setTimeout(function(){ if(audioOK) tone(784, 784, 0.7, 'sine', 0.18); }, 360);
+}
+
+function setMuted(m){
+  muted = m;
+  if (master && aCtx) master.gain.value = mutableGain();
+}
+
+function slowFactor(x, z){
+  var f = 1;
+  for (var i = 0; i < colliders.length; i++){
+    var o = colliders[i];
+    if (o.type !== 'slow') continue;
+    var dx = x - o.x, dz = z - o.z;
+    if (dx * dx + dz * dz < (o.r + 0.8) * (o.r + 0.8)) f = Math.min(f, 0.4);
+  }
+  return f;
+}
+
+function blockedFor(o, jumpY, isBF){
+  if (o.type === 'slow') return false;
+  if (isBF){ if (o.top < 1.7) return false; return true; }
+  if (jumpY > 0){
+    if (jumpMark && jumpMark.has(o.id)) return false;
+    if (jumpY + 0.35 >= o.top){
+      if (jumpMark) jumpMark.add(o.id);
+      return false;
+    }
+    return true;
+  }
+  return true;
+}
+function pushOut(px_, pz_, pr, jumpY, isBF){
+  var hits = 0;
+  for (var i = 0; i < colliders.length; i++){
+    var o = colliders[i];
+    if (!blockedFor(o, jumpY, isBF)) continue;
+    var dx = px_ - o.x, dz = pz_ - o.z;
+    var min = o.r + pr;
+    var d2 = dx * dx + dz * dz;
+    if (d2 < min * min){
+      hits++;
+      if (d2 > 1e-6){
+        var d = Math.sqrt(d2);
+        px_ = o.x + (dx / d) * min;
+        pz_ = o.z + (dz / d) * min;
+      } else {
+        px_ = o.x + min;
+        pz_ = o.z;
+      }
+    }
+  }
+  return { x: px_, z: pz_, hits: hits };
+}
+
+function updateBF(dt){
+  BF.dist = Math.hypot(px - BF.pos.x, pz - BF.pos.z);
+  var forwardX = -Math.sin(ry), forwardZ = -Math.cos(ry);
+  var tx = px + forwardX * 5, tz = pz + forwardZ * 5;
+  var dx = tx - BF.pos.x, dz = tz - BF.pos.z;
+  var d = Math.hypot(dx, dz) || 1;
+  var nix = dx / d, niz = dz / d;
+
+  var base = 10;
+  if (BF.state === 'charge') base = 16;
+  else if (BF.state === 'recover') base = 8;
+  if (BF.dist < 26 && BF.state !== 'recover') base = 14;
+
+  var slow = slowFactor(BF.pos.x, BF.pos.z);
+  if (slow < 1) base *= 0.6 + 0.4 * slow;
+  BF.speed = lerp(BF.speed, base, 1 - Math.pow(0.25, dt));
+
+  BF.vel.x = nix * BF.speed;
+  BF.vel.z = niz * BF.speed;
+
+  var bx = BF.pos.x + BF.vel.x * dt;
+  var bz = BF.pos.z + BF.vel.z * dt;
+
+  var res = pushOut(bx, bz, BF_R, 0, true);
+  bx = res.x; bz = res.z;
+  bx = clamp(bx, -330, 330);
+  bz = clamp(bz, -330, 330);
+
+  var oldX = BF.pos.x, oldZ = BF.pos.z;
+  BF.phase += BF.speed * dt * 0.62;
+  BF.pos.x = bx;
+  BF.pos.z = bz;
+  BF.pos.y = terrainH(bx, bz) + 1;
+  var travelled = Math.hypot(bx - oldX, bz - oldZ);
+  if (travelled > 0.04){
+    var stepInt = travStepInt();
+    if (BF.phase % stepInt < Math.max(0.001, travelled)) playBigStep();
+  }
+
+  var heading = Math.atan2(BF.vel.x, BF.vel.z);
+  BF.model.g.rotation.y = heading;
+  var lean = clamp(BF.speed / 26, 0.2, 1);
+  BF.model.g.rotation.x = 0.22 + lean * 0.16;
+  var swing = Math.sin(BF.phase) * lean;
+  var swing2 = Math.sin(BF.phase + Math.PI);
+  BF.model.legL.hip.rotation.x = -swing * 0.9;
+  BF.model.legR.hip.rotation.x = -swing2 * 0.9;
+  BF.model.legL.knee.rotation.x = Math.max(0, swing) * 0.9;
+  BF.model.legR.knee.rotation.x = Math.max(0, swing2) * 0.9;
+  BF.model.armL.hip.rotation.x = swing2 * 1.1;
+  BF.model.armR.hip.rotation.x = swing * 1.1;
+  BF.model.armL.knee.rotation.x = Math.max(0, -swing2) * 1.2;
+  BF.model.armR.knee.rotation.x = Math.max(0, -swing) * 1.2;
+  BF.model.torso.position.y = 5.6 + Math.sin(BF.phase * 2) * 0.15;
+  BF.model.head.rotation.z = Math.sin(BF.phase * 2 + 1) * 0.06;
+  BF.model.g.position.set(bx, terrainH(bx, bz) + 2.3 + Math.abs(Math.sin(BF.phase)) * 0.55 * lean, bz);
+
+  if (BF.state === 'stalk' && BF.dist < 34){
+    BF.state = 'charge';
+    BF.charging = true;
+    shakePunch = Math.max(shakePunch, 0.7);
+    sfxCharge();
+    sfxRoar(0.9);
+  } else if (BF.state === 'charge' && BF.dist > 44){
+    BF.state = 'recover';
+    BF.charging = false;
+    BF.roarAcc = 2;
+  } else if (BF.state === 'recover' && BF.dist > 30){
+    BF.state = 'stalk';
+  }
+  if (BF.charging){
+    BF.roarAcc -= dt;
+    if (BF.roarAcc <= 0){
+      sfxRoar(0.8);
+      BF.roarAcc = rand(3, 6);
+      shakePunch = Math.max(shakePunch, 0.4);
+    }
+  } else {
+    BF.roarAcc -= dt;
+    if (BF.roarAcc <= 0 && BF.dist < 70){
+      sfxRoar(clamp(1 - BF.dist / 80, 0.25, 1));
+      BF.roarAcc = rand(7, 14) * clamp(BF.dist / 60, 0.6, 1.6);
+      shakePunch = Math.max(shakePunch, 0.15);
+    }
+  }
+}
+function travStepInt(){
+  var v = BF.speed;
+  return v > 0 ? (1 / v) : 1;
+}
+function playBigStep(){
+  if (!audioOK) return;
+  var rel = relToPlayer(BF.pos);
+  noiseBurst(0.16, 70, 1.4, 0.5, rel);
+  tone(48, 30, 0.15, 'sine', 0.3, rel);
+}
+
+function relToPlayer(wp){
+  if (!audioOK || !bfPan) return 0;
+  camera.getWorldDirection(camForward);
+  camForward.y = 0; camForward.normalize();
+  camRight.set(-camForward.z, 0, camForward.x);
+  var dx = wp.x - camera.position.x, dz = wp.z - camera.position.z;
+  var len = Math.hypot(dx, dz) || 1;
+  var dotR = (dx * camRight.x + dz * camRight.z) / len;
+  var distM = BF.dist;
+  var invDist = clamp(1 - distM / 120, 0.05, 1);
+  return clamp(dotR * invDist, -1, 1);
+}
+
+function doJump(){
+  if (jy <= 0.01){
+    vy = JUMP_V;
+    jy = 0.01;
+    jumpMark = new Set();
+    stamina = Math.max(0, stamina - 6);
+    sfxJump();
+  }
+}
+
+function updatePlayer(dt){
+  var f = (keys['KeyW'] ? 1 : 0) - (keys['KeyS'] ? 1 : 0);
+  var r = (keys['KeyD'] ? 1 : 0) - (keys['KeyA'] ? 1 : 0);
+  var moving = f !== 0 || r !== 0;
+  var sprinting = !!keys['ShiftLeft'] && f > 0 && stamina > 0;
+  var sf = slowFactor(px, pz);
+  if (jy > 0.05) sf = 1;
+  var target = 0;
+  if (moving) target = (sprinting ? SPRINT_SPEED : WALK_SPEED) * sf;
+
+  var accel = sprinting ? 5.5 : 8;
+  var fx = (-Math.sin(ry) * f + Math.cos(ry) * r);
+  var fz = (-Math.cos(ry) * f - Math.sin(ry) * r);
+  var fl = Math.hypot(fx, fz) || 1;
+  fx /= fl; fz /= fl;
+  var tvx = fx * target, tvz = fz * target;
+  vx = lerp(vx, tvx, 1 - Math.pow(0.02, dt));
+  vz = lerp(vz, tvz, 1 - Math.pow(0.02, dt));
+
+  if (sprinting){
+    stamina = Math.max(0, stamina - STAM_COST * dt);
+    lastSprint = 0;
+  } else {
+    lastSprint += dt;
+    if (lastSprint > STAM_REGEN_DELAY && stamina < STAM_MAX) stamina = Math.min(STAM_MAX, stamina + STAM_REGEN * dt);
+  }
+
+  if (jy > 0){
+    vy += GRAV * dt;
+    jy += vy * dt;
+  }
+  if (jy <= 0){
+    var landed = jy < -0.02;
+    jy = 0; vy = 0;
+    if (landed) sfxLand();
+  }
+
+  var npx = px + vx * dt;
+  var npz = pz + vz * dt;
+  npx = clamp(npx, -330, 330);
+  npz = clamp(npz, -330, 330);
+
+  var res = pushOut(npx, npz, PLAY_R, jy, false);
+  npx = res.x; npz = res.z;
+  if (res.hits > 0 && Math.hypot(vx, vz) > 8){
+    scratchAcc -= dt;
+    if (scratchAcc <= 0){ sfxScrape(); scratchAcc = 0.4; }
+  }
+
+  px = npx; pz = npz;
+
+  bobT += laneStepFreq() * dt;
+  var camY = terrainH(px, pz) + EYE_H + jy;
+  if (sf < 1 && jy <= 0.05) camY -= 0.18;
+
+  shake *= Math.pow(0.0001, dt);
+  shakePunch *= Math.pow(0.0004, dt);
+  var shx = 0, shz = 0, shr = 0;
+  var nearBf = clamp(1 - BF.dist / 30, 0, 1);
+  var moveShake = (jy <= 0.01 ? Math.hypot(vx, vz) : 0) * 0.008;
+  var tot = (shake + shakePunch) * 0.55 + nearBf * 0.28 + moveShake;
+  tot = Math.min(tot, 1.4);
+  if (tot > 0.01){
+    shx = (Math.random() - 0.5) * 0.5 * tot * 2;
+    shz = (Math.random() - 0.5) * 0.5 * tot * 2;
+    shr = (Math.random() - 0.5) * 0.5 * tot * 1.6;
+  }
+
+  camera.position.set(px + shx, camY + shz, pz + shz * 1.4);
+  camera.rotation.y = ry + lookBackT;
+  camera.rotation.z = shr;
+  camera.rotation.x = pitch + (tot > 0 ? (Math.random() - 0.5) * 0.018 * tot : 0);
+
+  var wantFov = sprinting ? 82 : 70;
+  camera.fov = lerp(camera.fov, wantFov, 1 - Math.pow(0.05, dt));
+  camera.updateProjectionMatrix();
+
+  flashLight.position.copy(camera.position).add(camera.getWorldDirection(new THREE.Vector3()).clone().multiplyScalar(0.4));
+  var fwd2 = camera.getWorldDirection(new THREE.Vector3());
+  flashTarget.position.copy(camera.position).add(fwd2.multiplyScalar(40));
+  flashTarget.position.y = camera.position.y - 0.3;
+}
+
+function laneStepFreq(){
+  var s = Math.hypot(vx, vz);
+  if (s < 1) return 0;
+  return s > 12 ? 5.3 : 3.1;
+}
+
+function updateAudio(dt){
+  if (!audioOK) return;
+  var moving = Math.hypot(vx, vz);
+  if (moving > 1 && jy <= 0.01){
+    var int = laneStepFreq();
+    stepInterval = int > 0 ? 1 / int : 0.3;
+    stepAcc += dt;
+    if (stepAcc >= stepInterval){
+      stepAcc = 0;
+      var heavy = moving > 12;
+      var pan = relToPlayer({ x: px + 0.001, z: pz + 0.001 });
+      setTimeout(function(){ sfxStep(heavy); }, 0);
+    }
+  } else stepAcc = 0;
+  var near = clamp(1 - BF.dist / 42, 0, 1);
+  if (near > 0.05){
+    var rate = lerp(1.1, 0.42, near);
+    heartbeatAcc += dt;
+    if (heartbeatAcc >= rate){
+      heartbeatAcc = 0;
+      heartbeatState++;
+      if (heartbeatState % 2 === 0) setTimeout(function(){ sfxHeart(false); }, 0);
+      else setTimeout(function(){ sfxHeart(true); }, 60);
+    }
+  }
+  if (stamina < 30 && moving > 2){
+    breathAcc += dt;
+    if (breathAcc >= 1.6){
+      breathAcc = 0;
+      setTimeout(function(){ sfxBreath(); }, 0);
+    }
+  }
+  howlAcc -= dt;
+  if (howlAcc <= 0){
+    sfxHowl();
+    howlAcc = rand(14, 30);
+  }
+  if (windSrc && windGain){
+    windGain.gain.value = 0.05 + near * 0.05;
+  }
+}
+
+function updateHUD(){
+  var m = Math.max(0, Math.round(Math.hypot(EXIT.x - px, EXIT.z - pz)));
+  $('distVal').textContent = m + ' m';
+  var fwd = new THREE.Vector3();
+  camera.getWorldDirection(fwd);
+  fwd.y = 0; fwd.normalize();
+  var ex = EXIT.x - px, ez = EXIT.z - pz;
+  var el = Math.hypot(ex, ez) || 1;
+  ex /= el; ez /= el;
+  var angle = Math.atan2(-(fwd.x * ez - fwd.z * ex), fwd.x * ex + fwd.z * ez);
+  var deg = angle * 180 / Math.PI;
+  $('arrow').style.transform = 'rotate(' + deg + 'deg)';
+  var pct = clamp(stamina / STAM_MAX * 100, 0, 100);
+  var fill = $('stamFill');
+  fill.style.width = pct + '%';
+  fill.style.background = pct < 28 ? 'linear-gradient(90deg,#ff6a5a,#ffcf6a)' : 'linear-gradient(90deg,#6ff57a,#efff8f)';
+  var threat = clamp(1 - BF.dist / 40, 0, 1);
+  var pulse = threat * 0.3 + 0.2 * threat * (0.5 + 0.5 * Math.sin(time * 7));
+  $('bfOverlay').style.opacity = clamp(threat * 0.7 + (BF.charging ? 0.25 * (0.5 + 0.5 * Math.sin(time * 13)) : 0), 0, 1) * 0.7;
+}
+
+function updateFog(dt){
+  for (var i = 0; i < fogSprites.length; i++){
+    var sp = fogSprites[i];
+    sp.position.x += sp.userData.drift * dt;
+    if (sp.position.x > 350) sp.position.x = -350;
+  }
+}
+
+function menuArrow(is){
+  $('menu').classList.toggle('hidden', !is);
+  $('pauseMenu').classList.toggle('hidden', is || state !== 'paused');
+  $('winMenu').classList.toggle('hidden', state !== 'won');
+  $('loseMenu').classList.toggle('hidden', state !== 'lost');
+  $('hud').classList.toggle('on', state === 'play');
+  $('vign').classList.toggle('on', state === 'play');
+  $('crosshair').style.display = state === 'play' ? 'block' : 'none';
+  $('nv').classList.toggle('on', nvOn && state === 'play');
+  $('nvScans').classList.toggle('on', nvOn && state === 'play');
+}
+
+function startGame(){
+  initAudio();
+  resetGame();
+  state = 'play';
+  menuArrow(false);
+  if (document.body.requestPointerLock){
+    document.body.requestPointerLock();
+  }
+}
+
+$('btnStart').onclick = startGame;
+$('btnResume').onclick = function(){
+  state = 'play';
+  menuArrow(false);
+  if (document.body.requestPointerLock) document.body.requestPointerLock();
+};
+$('btnRestart').onclick = function(){ location.reload(); };
+$('btnRetry').onclick = function(){ location.reload(); };
+$('btnAgain').onclick = function(){ location.reload(); };
+
+document.addEventListener('pointerlockchange', function(){
+  if (document.pointerLockElement !== document.body && state === 'play'){
+    pauseGame();
+  }
+});
+document.addEventListener('pointerlockerror', function(){
+  reportErr('pointerlock hatası - tıklayarak tekrar deneyin');
+});
+
+var mouseSwap = { x: 0, y: 0, on: false };
+document.addEventListener('mousemove', function(e){
+  if (state !== 'play') return;
+  if (document.pointerLockElement === document.body){
+    ry -= e.movementX * 0.0022;
+    pitch = clamp(pitch - e.movementY * 0.0022, -1.4, 1.4);
+  } else if (mouseSwap.on){
+    ry -= (e.clientX - mouseSwap.x) * 0.0035;
+    pitch = clamp(pitch - (e.clientY - mouseSwap.y) * 0.0035, -1.4, 1.4);
+    mouseSwap.x = e.clientX; mouseSwap.y = e.clientY;
+  }
+});
+document.addEventListener('mousedown', function(e){
+  if (state !== 'play') return;
+  if (document.pointerLockElement !== document.body){
+    if (document.body.requestPointerLock) document.body.requestPointerLock();
+    mouseSwap.on = true;
+    mouseSwap.x = e.clientX; mouseSwap.y = e.clientY;
+  }
+});
+document.addEventListener('mouseup', function(){ mouseSwap.on = false; });
+
+document.addEventListener('keydown', function(e){
+  if (e.code === 'Space') e.preventDefault();
+  if (state !== 'play') return;
+  keys[e.code] = true;
+  if (e.code === 'Space') doJump();
+  if (e.code === 'KeyF'){
+    flashOn = !flashOn;
+    flashLight.intensity = flashOn ? 2.0 : 0;
+    flashCone.visible = flashOn;
+  }
+  if (e.code === 'KeyN'){
+    nvOn = !nvOn;
+    $('nv').classList.toggle('on', nvOn);
+    $('nvScans').classList.toggle('on', nvOn);
+    HEMI.intensity = nvOn ? 1.0 : 0.55;
+    AMB.intensity = nvOn ? 0.95 : 0.5;
+    scene.fog.density = nvOn ? 1 / 210 : 1 / 95;
+  }
+  if (e.code === 'KeyM') setMuted(!muted);
+});
+document.addEventListener('keyup', function(e){
+  keys[e.code] = false;
+});
+
+var R_HELD = false;
+setInterval(function(){
+  if (document.pointerLockElement === document.body) return;
+  R_HELD = false;
+}, 400);
+document.addEventListener('keydown', function(e){
+  if (e.code === 'KeyR') R_HELD = true;
+});
+document.addEventListener('keyup', function(e){
+  if (e.code === 'KeyR') R_HELD = false;
+});
+
+function pauseGame(){
+  state = 'paused';
+  menuArrow(false);
+  $('pauseMenu').classList.remove('hidden');
+}
+
+function reachExit(){
+  if (winShown) return;
+  winShown = true;
+  state = 'won';
+  sfxCheer();
+  menuArrow(false);
+  $('winMenu').classList.remove('hidden');
+}
+function caughtByBF(){
+  if (loseShown) return;
+  loseShown = true;
+  state = 'lost';
+  sfxCatch();
+  $('caflash').style.transition = 'opacity .1s';
+  $('caflash').style.opacity = 0.9;
+  setTimeout(function(){ $('caflash').style.opacity = 0; }, 220);
+  $('flashTxt').textContent = 'YAKALANDIN';
+  $('flashTxt').classList.add('on');
+  setTimeout(function(){ $('flashTxt').classList.remove('on'); }, 1600);
+  menuArrow(false);
+  $('loseMenu').classList.remove('hidden');
+}
+
+var nvOffTimer = null;
+var nyvOff = $('nv'), nvScansOff = $('nvScans');
+
+var lastT = 0;
+function tick(now){
+  requestAnimationFrame(tick);
+  var dt = Math.min(0.05, (now - lastT) / 1000 || 0.016);
+  lastT = now;
+  time += dt;
+  if (state === 'play'){
+    updatePlayer(dt);
+    updateBF(dt);
+    updateAudio(dt);
+    updateHUD();
+    if (Math.hypot(EXIT.x - px, EXIT.z - pz) < 9) reachExit();
+    if (BF.dist < 3.4) caughtByBF();
+  } else {
+    camera.position.x += 0;
+    updateFog(dt);
+  }
+  updateFog(dt);
+  firefliesT += dt;
+  var fp = fireGeo.attributes.position;
+  for (var i = 0; i < FIRE_N; i++){
+    var fh2 = fireBase[i] + Math.sin(firefliesT * 1.5 + i * 1.7) * 0.5;
+    fp.setY(i, fh2);
+  }
+  fp.needsUpdate = true;
+
+  moonGlow.scale.set(320 + Math.sin(time * 0.6) * 14, 320 + Math.sin(time * 0.6) * 14, 1);
+  moonGlow.material.opacity = 0.8 + Math.sin(time * 0.8) * 0.06;
+
+  var pv = new THREE.Vector3(px, 0, pz);
+  moonLight.position.set(pv.x + MOON_POS.x * 0.28, MOON_POS.y, pv.z + MOON_POS.z * 0.28);
+  moonLight.target.position.copy(pv);
+
+  var lookT = (R_HELD && state === 'play') ? Math.PI : 0;
+  lookBackT = lerp(lookBackT, lookT, 1 - Math.pow(0.05, dt));
+
+  var hint = $('hudHint');
+  if (hint){
+    var distToExit2 = Math.hypot(EXIT.x - px, EXIT.z - pz);
+    if (state === 'play' && BF.dist < 26){
+      hint.textContent = 'ARKANDA KOCA AYAK! KÜKREME YAKLAŞIYOR - KOŞ!';
+      hint.style.color = '#ff8a6a';
+      hint.style.fontWeight = 'bold';
+    } else if (state === 'play' && distToExit2 < 60){
+      hint.textContent = 'Neredeyse ormanda değilsin... ÇIKIŞ ÇOK YAKIN!';
+      hint.style.color = '#aef0be';
+      hint.style.fontWeight = 'bold';
+    } else if (state === 'play'){
+      hint.textContent = 'W A S D: koş   SHIFT: hızlı koş   SPACE: zıpla   F: el feneri   N: gece görüşü   R: arkaya bak   M: ses';
+      hint.style.color = '#8f96a4';
+      hint.style.fontWeight = 'normal';
+    } else {
+      hint.textContent = '';
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', function(){
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+try{
+  resetGame();
+  menuArrow(true);
+  requestAnimationFrame(tick);
+}catch(e){
+  reportErr('boot: ' + e.message + '\n' + (e.stack || ''));
+}
+})();
+</script>
+</body>
+</html>
