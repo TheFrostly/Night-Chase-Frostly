@@ -1,2 +1,3 @@
-# Night-Chase-Frostly
-Just play this game lol so easy now Beta
+# Night-Chase
+Game beta Just play for Fun
+
